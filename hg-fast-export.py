@@ -266,7 +266,7 @@ def sanitize_name(name,what="branch", mapping={}):
   if not auto_sanitize:
     return mapping.get(name,name)
   n=mapping.get(name,name)
-  p=re.compile(b'([[ ~^:?\\\\*]|\.\.)')
+  p=re.compile(b'([\\[ ~^:?\\\\*]|\.\.)')
   n=p.sub(b'_', n)
   if n[-1:] in (b'/', b'.'): n=n[:-1]+b'_'
   n=b'/'.join([dot(s) for s in n.split(b'/')])
@@ -493,7 +493,12 @@ def verify_heads(ui,repo,cache,force,ignore_unnamed_heads,branchesmap):
     sanitized_name=sanitize_name(b,"branch",branchesmap)
     sha1=get_git_sha1(sanitized_name)
     c=cache.get(sanitized_name)
-    if sha1!=c:
+    if not c and sha1:
+      stderr_buffer.write(
+        b'Error: Branch [%s] already exists and was not created by hg-fast-export, '
+        b'export would overwrite unrelated branch\n' % b)
+      if not force: return False
+    elif sha1!=c:
       stderr_buffer.write(
         b'Error: Branch [%s] modified outside hg-fast-export:'
         b'\n%s (repo) != %s (cache)\n' % (b, b'<None>' if sha1 is None else sha1, c)
